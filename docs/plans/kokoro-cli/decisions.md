@@ -53,3 +53,18 @@ missing. The CLI logs the device with each chunk so silence can be diagnosed.
 ## D-08: Console script `kokoro-tts`, package `kokoro_mcp`
 2026-10-28, planning. The package keeps the repo identity and stays importable for the planned
 MCP server; the console script names the actual behavior instead of the transport.
+
+## D-11: Warm daemon with MPS, streaming PCM over a Unix socket
+2026-10-28, speed pass. 87 % of a `kokoro-tts` run was per-process cost: 2.0 s of
+`torch`/`kokoro` imports, 1.3-1.6 s of checkpoint load, and 0.1-0.3 s of MPS kernel
+compilation. A detached `python -m kokoro_mcp.server` (started by the CLI on demand, idle exit
+after 30 min) keeps one pipeline per language and streams JSON-framed float32 chunks to clients.
+Measured on the M4 Pro for a 2.9 s sentence: 4.7 s one-shot, 5.2 s cold daemon start, 0.17-0.21 s
+warm. MPS synthesizes in 0.10 s versus 0.36 s on CPU once warm, so the worker defaults to MPS and
+pays its one-time compilation in `_engine()` before answering; `KOKORO_DEVICE=cpu` opts out.
+Rejected in-process caching (the CLI exits), an HTTP stack (no dependency or port allocation
+needed for a local tool), and `torch.multiprocessing` workers (model state and lifetime are
+simpler in one threaded process). The socket is `0600` under `~/.cache/kokoro-tts`; playback and
+WAV writing stay in the client so `Speaker` and `WavFileSink` are unchanged. A client that
+disconnects (aborted hook utterance, Ctrl-C) closes the socket, which stops the server's
+per-chunk `sendall` and the synthesis generator behind it.

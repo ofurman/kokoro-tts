@@ -62,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="print voice ids published in the model repo and exit",
     )
     parser.add_argument(
+        "--no-daemon",
+        action="store_true",
+        help="synthesize in this process instead of the warm background worker",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="suppress progress messages on stderr",
@@ -122,12 +127,30 @@ def main(argv: list[str] | None = None) -> int:
         if not args.quiet:
             print(message, file=sys.stderr)
 
-    engine = KokoroEngine(lang_code=args.lang)
+    def local_stream():
+        return KokoroEngine(
+            lang_code=args.lang, device=os.environ.get("KOKORO_DEVICE") or None
+        ).stream(text, voice=args.voice, speed=args.speed)
 
+    def open_stream():
+        if args.no_daemon or os.environ.get("KOKORO_NO_DAEMON") not in (None, "", "0"):
+            return local_stream()
+        from .server import DaemonClient, DaemonUnavailable, ensure_daemon
+
+        try:
+            return DaemonClient(ensure_daemon()).stream(
+                text, voice=args.voice, speed=args.speed, lang=args.lang
+            )
+        except (DaemonUnavailable, OSError) as exc:
+            log(f"kokoro-tts: daemon unavailable ({exc}); using a one-shot process")
+            return local_stream()
+
+    chunks = None
     try:
+        chunks = open_stream()
         if save_path is not None:
             sink = WavFileSink(save_path)
-            for chunk in engine.stream(text, voice=args.voice, speed=args.speed):
+            for chunk in chunks:
                 sink.write(chunk.samples, chunk.sample_rate)
                 log(f"[{chunk.index + 1}] {chunk.duration:5.2f}s synthesized")
             if not sink.written:
@@ -138,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             played = 0
             with Speaker() as speaker:
-                for chunk in engine.stream(text, voice=args.voice, speed=args.speed):
+                for chunk in chunks:
                     speaker.play(chunk.samples)
                     played += 1
                     log(
@@ -153,6 +176,11 @@ def main(argv: list[str] | None = None) -> int:
     except (RuntimeError, ValueError, OSError, ImportError) as exc:
         print(f"kokoro-tts: {exc}", file=sys.stderr)
         return 1
+    finally:
+        # Closing the client generator closes the socket, which tells the
+        # worker to stop synthesizing the rest of an interrupted utterance.
+        if chunks is not None:
+            chunks.close()
     return 0
 
 
