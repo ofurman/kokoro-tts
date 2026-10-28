@@ -1,0 +1,53 @@
+{
+  "plan": "kokoro-cli",
+  "iteration": 1,
+  "stages": [
+    {
+      "id": 1,
+      "title": "Environment and first real audio",
+      "status": "DONE",
+      "box": 1.5,
+      "review": true,
+      "depends": [],
+      "commit": null,
+      "note": "Python 3.12.9 env; 24 kHz mono WAV verified; 5.8 s wall for 2.1 s audio including model load."
+    },
+    {
+      "id": 2,
+      "title": "Save WAV files",
+      "status": "DONE",
+      "box": 1,
+      "review": false,
+      "depends": [
+        1
+      ],
+      "commit": null,
+      "note": "Single chunk keeps PATH; three sentences produced PATH-001..003, each 24 kHz mono PCM16."
+    },
+    {
+      "id": 3,
+      "title": "Stream to speakers",
+      "status": "DONE",
+      "box": 1,
+      "review": false,
+      "depends": [
+        1
+      ],
+      "commit": null,
+      "note": "ffplay consumed PCM in real time but was silent; switched to sounddevice/CoreAudio (D-09). Tone and speech audibly confirmed by owner on MacBook Pro Speakers."
+    },
+    {
+      "id": 4,
+      "title": "CLI surface tests and docs",
+      "status": "DONE",
+      "box": 1.5,
+      "review": false,
+      "depends": [
+        2,
+        3
+      ],
+      "commit": null,
+      "note": "11 unit tests + 2 integration tests pass; README documents every flag."
+    }
+  ]
+}
