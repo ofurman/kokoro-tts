@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.speed <= 0:
         parser.error("--speed must be greater than 0")
 
-    save_path = Path(args.save) if args.save else None
+    save_path = Path(args.save).expanduser() if args.save else None
     if save_path is not None and save_path.suffix.lower() != ".wav":
         parser.error("--save only supports .wav files")
 

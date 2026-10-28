@@ -37,6 +37,12 @@ listing. A hardcoded 54-name list would go stale if voices are added.
 chunk boundaries inspectable. Rejected concatenating into one file (needs buffering or reopen
 tricks) and a separate `--save-dir` flag (extra surface).
 
+## D-10: Distributable with `uv tool install .`
+2026-10-28, execution. The package builds to a wheel with hatchling and exposes `kokoro-tts`,
+so `uv tool install .` installs it into an isolated env with the executable in `~/.local/bin`.
+Verified running from `/tmp` with playback. Rejected a shell wrapper around `uv run` (needs the
+repo checkout and loses isolation).
+
 ## D-09: Playback through sounddevice/PortAudio, ffplay only as fallback
 2026-10-28, execution. ffplay consumed the PCM in real time (10.68 s of audio took 11.04 s) but
 nothing was audible on this machine, so SDL's device choice is not trusted. Switch the default

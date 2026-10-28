@@ -65,3 +65,21 @@ def test_multiple_chunks_are_numbered_and_complete(tmp_path):
 def test_rejects_non_wav_output(tmp_path):
     with pytest.raises(ValueError, match="only .wav"):
         WavFileSink(tmp_path / "out.mp3")
+
+
+def test_relative_save_path_resolves_to_absolute(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    sink = WavFileSink("out.wav")
+    sink.write(np.zeros(240, dtype=np.float32))
+
+    assert sink.path == tmp_path / "out.wav"
+    assert sink.written == [tmp_path / "out.wav"]
+
+
+def test_home_save_path_is_expanded(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    sink = WavFileSink("~/out.wav")
+
+    assert sink.path == tmp_path / "out.wav"

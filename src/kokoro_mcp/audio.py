@@ -46,7 +46,8 @@ class WavFileSink:
     """
 
     def __init__(self, path: str | Path) -> None:
-        path = Path(path)
+        # Accept relative, absolute and ~ paths; store and report absolute ones.
+        path = Path(path).expanduser().resolve()
         if path.suffix.lower() != ".wav":
             raise ValueError(
                 f"unsupported output format {path.suffix!r}; only .wav is supported"

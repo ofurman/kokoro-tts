@@ -20,14 +20,28 @@ uv sync
 The first synthesis downloads `kokoro-v1_0.pth` (327 MB) plus the selected voice into
 `~/.cache/huggingface`.
 
+### Install as a uv tool (no `uv run`)
+
+```bash
+uv tool install .
+kokoro-tts "Kokoro runs locally."
+```
+
+`uv` puts `kokoro-tts` in `~/.local/bin` (already on PATH here). Reinstall after source
+changes with `uv tool install --force .`; remove it with `uv tool uninstall kokoro-mcp`.
+The tool env is isolated from `.venv`, so it works from any directory and shares the
+HuggingFace model cache, but not the repo checkout.
+
 ## Usage
 
 ```bash
 # Play on the speakers (default)
 uv run kokoro-tts "Kokoro runs locally on this machine."
 
-# Save to one WAV
+# Save to one WAV (relative, absolute and ~ paths all work; parents are created)
 uv run kokoro-tts "Kokoro runs locally." --save out.wav
+uv run kokoro-tts "Kokoro runs locally." --save /tmp/kokoro/out.wav
+uv run kokoro-tts "Kokoro runs locally." --save ~/Desktop/kokoro.wav
 
 # Several sentences: one numbered file per chunk
 uv run kokoro-tts "First sentence. Second sentence." --save out.wav
